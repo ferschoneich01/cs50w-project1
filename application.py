@@ -1,3 +1,4 @@
+from functools import reduce
 import os
 import requests
 import json
@@ -5,6 +6,7 @@ from flask import Flask, session, render_template, url_for, request, flash, redi
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
+from funciones import login_required
 
 app = Flask(__name__)
 
@@ -22,9 +24,8 @@ engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
 
-    
-
 @app.route("/")
+@login_required
 def index():
     isbn='080213825X'
     res = requests.get("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn)
@@ -32,8 +33,20 @@ def index():
     items = data["items"]
     encoded = json.dumps(items)
     decode = json.loads(encoded)
+    resultado = decode[0]["volumeInfo"]["title"]
+    #Obtencion del nombre de usuario
+    idUser=session.get("id_user")
+    id=str(idUser)
+    user = db.execute("SELECT * FROM Users WHERE id_user = "+id).fetchall()
+    
+    return render_template('index.html',username = user[0]["username"])
 
-    return decode[0]["volumeInfo"]["title"]
+#Cerrar sesion
+
+#@app.route("/logout/<id>", methods=["GET"])
+#def login(id):
+
+ #return redirect("/")
 
 @app.route("/login", methods=["POST","GET"])
 def login():
@@ -45,15 +58,17 @@ def login():
 
         # Ensure username was submitted
         if not request.form.get("username"):
-            flash("Ingrese un nombre de usuario")
+            return "Ingrese un nombre de usuario"
 
         # Ensure password was submitted
         elif not request.form.get("password"):
-            flash("Ingrese una contraseña")
+            return "Ingrese una contraseña"
 
+        #nomrbre de usuario ingresado
+        username = request.form.get("username")
         
         # Query database for username
-        rows = db.execute("SELECT * FROM Users WHERE Username = :username",username=request.form.get("username")).fetchall()
+        rows = db.execute("SELECT * FROM Users WHERE Username = '"+username+"'").fetchall()
 
         # Ensure username exists and password is correct
         if len(rows) != 1 or not rows[0]["password"] == request.form.get("password"):
@@ -62,9 +77,8 @@ def login():
 
         # Remember which user has logged in
         session["id_user"] = rows[0]["id_user"]
-
+        
         # Redirect user to home page
         return redirect("/")
-
     else:
         return render_template("login.html")
