@@ -1,0 +1,16 @@
+{% extends 'index.html' %}
+
+{% block body %}
+{% for book in books %}
+<div class="card" style="width: 18rem; margin-top: 20px;" >
+    <img src="{{book.1}}" class="card-img-top" alt="...">
+    <div class="card-body">
+        <h5 class="card-title">{{book.0}}</h5>
+        <h5 class="card-text">Autor:{{book.2}}</h5>
+        <p class="card-text">...</p>
+        <h5>rate:{{book.3}}</h5>
+        <a href="#" class="btn btn-primary" style="width: 100%;">DESCARGAR</a>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
