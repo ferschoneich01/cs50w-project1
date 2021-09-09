@@ -29,24 +29,19 @@ db = scoped_session(sessionmaker(bind=engine))
 @login_required
 def index():
     books=[]
-    characters = "('),"
+    isbn=[]
     #seleccion del top 5 libros
-    libros = db.execute("SELECT isbn FROM books ORDER BY isbn LIMIT 5").fetchall()
+    libros = db.execute("SELECT * FROM books ORDER BY isbn LIMIT 5").fetchall()
     for libro in libros:
-        print(libro)
-        isbn = libro
-        isbn = re.sub("\!|\'|\?|\(|\(|\,","",isbn)  
-        print(isbn)      
+        isbn = f"{libro[0]}"
         res = requests.get("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn)
         data = res.json()
         items = data["items"]
         encoded = json.dumps(items)
         decode = json.loads(encoded)
 
-        print("llego")
         books.append([decode[0]["volumeInfo"]["title"],decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"],decode[0]["volumeInfo"]["authors"],decode[0]["volumeInfo"]["averageRating"]])
         #book = decode[0]["volumeInfo"]
-        
         #categories = decode[0]["volumeInfo"]["categories"]
     for book in books:
         print(book[0])    
@@ -55,7 +50,7 @@ def index():
     id=str(idUser)
     user = db.execute("SELECT * FROM Users WHERE id_user = "+id).fetchall()
     
-    return render_template('books.html',username = user[0]["username"],books=books)
+    return render_template('books.html',username = user[0]["username"])
 
 #Cerrar sesion
 
