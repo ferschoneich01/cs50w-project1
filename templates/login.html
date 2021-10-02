@@ -9,7 +9,18 @@
     <link href="../static/css/styles.css" rel="stylesheet">
 </head>
 <body>
+       
 <div class="contenedor_login">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    {% for message in messages%}
+        <div class="alert alert-danger alert-dismissible fade show" style="padding-top: 10px;" role="alert">
+            <strong>{{message}}</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor%}
+    {% endif%}
+    {% endwith %} 
     <div id="parte1">
         <img src="https://res.cloudinary.com/dzlbg8ni6/image/upload/v1630216985/book-bookmark-icon_34486_hjcguv.png" class="avatar">
         <form action="/login" method="POST">
@@ -23,12 +34,11 @@
 
             <button  class="botonIni"  style="width: 100%;" type="submit">Inciar sesion</button></button><hr color="black">
             <nav>
-                <a href="#">Olvide mi contraseña</href>
-            </nav>
-            <nav>
                  <a href="/register">¿No estas registrado?</href>
             </nav>
     </div>
 </div>
+ <!--JS BOOTHSTRAP-->
+ <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ" crossorigin="anonymous"></script>
 </body>
 </html>

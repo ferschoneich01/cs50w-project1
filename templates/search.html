@@ -1,0 +1,24 @@
+{% extends 'index.html' %}
+
+{% block body %}
+        
+<div class="container-fluid">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages%}
+            <div class="alert alert-danger alert-dismissible fade show" style="padding-top: 10px;" role="alert">
+                <strong>{{message}}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor%}
+        {% endif%}
+        {% endwith %}
+    <label for="exampleDataList" class="form-label" style="padding-top: 20px;">Search your book</label>
+    <form class="d-flex" action="/searchResult" method="POST">
+        <input name="search" class="form-control me-2" type="text" placeholder="Search" style="width: 80%;">
+        <button class="btn btn-outline-success" type="submit">Search</button>
+    </form>
+</div>
+    {% block content %}
+    {% endblock %}
+{% endblock %}

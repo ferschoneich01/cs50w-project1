@@ -1,8 +1,7 @@
 import os
-import re
 import requests
 import json
-from flask import Flask, session, render_template, url_for, request, flash, redirect
+from flask import Flask, session, render_template, url_for, request, flash, redirect,jsonify
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -30,27 +29,30 @@ db = scoped_session(sessionmaker(bind=engine))
 def index():
     books=[]
     isbn=[]
-    #seleccion del top 5 libros
-    libros = db.execute("SELECT * FROM books ORDER BY isbn LIMIT 5").fetchall()
+    #seleccion del top 12 libros
+    libros = ["1451648537","1442468351","0446679097","0385339097",
+    "0812995341","1423121309","0061053562","0345379063",
+    "0765326264","0446611212","0345519515","1423108760"]
+    #Impresion de los libros
     for libro in libros:
-        isbn = f"{libro[0]}"
-        res = requests.get("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn)
+        isbn = libro;
+        res = requests.get("https://www.googleapis.com/books/v1/volumes?q="+isbn)
         data = res.json()
         items = data["items"]
-        encoded = json.dumps(items)
+        encoded = json.dumps(items) 
         decode = json.loads(encoded)
-
-        books.append([decode[0]["volumeInfo"]["title"],decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"],decode[0]["volumeInfo"]["authors"],decode[0]["volumeInfo"]["averageRating"]])
-        #book = decode[0]["volumeInfo"]
-        #categories = decode[0]["volumeInfo"]["categories"]
-    for book in books:
-        print(book[0])    
+        try:
+                rate = decode[0]["volumeInfo"]["averageRating"]       
+        except Exception:
+                rate = "0"
+        books.append([decode[0]["volumeInfo"]["title"],decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"],rate])
+        
     #Obtencion del nombre de usuario
     idUser=session.get("id_user")
     id=str(idUser)
     user = db.execute("SELECT * FROM Users WHERE id_user = "+id).fetchall()
     
-    return render_template('books.html',username = user[0]["username"])
+    return render_template('books.html',username = user[0]["username"],books=books)
 
 #Cerrar sesion
 
@@ -69,11 +71,13 @@ def login():
 
         # Ensure username was submitted
         if not request.form.get("username"):
-            return "Ingrese un nombre de usuario"
+            flash('Ingrese un nombre de usuario')
+            return redirect("/login")
 
         # Ensure password was submitted
         elif not request.form.get("password"):
-            return "Ingrese una contraseña"
+            flash('Ingrese una contraseña')
+            return redirect("/login")
 
         #nomrbre de usuario ingresado
         username = request.form.get("username")
@@ -83,7 +87,8 @@ def login():
 
         # Ensure username exists and password is correct
         if len(rows) != 1 or not check_password_hash(rows[0]["password"], request.form.get("password")):
-            return "Contraseña Incorrecta"
+            flash('Contraseña Incorrecta')
+            return redirect("/login")
 
 
         # Remember which user has logged in
@@ -102,14 +107,15 @@ def register():
 
         # Ensure username was submitted
         if not request.form.get("username"):
-            return "Ingrese un nombre de usuario"
+            flash("Ingrese un nombre de usuario")
+            
 
         # Ensure password was submitted
         elif not request.form.get("password"):
-            return "Ingrese una contraseña"
+            flash("Ingrese una contraseña")
 
         elif not request.form.get("Correo"):
-            return "Ingrese un correo"
+            flash("Ingrese un correo")
 
         #nomrbre de usuario ingresado
         username = request.form.get("username")
@@ -119,9 +125,91 @@ def register():
         # Query database for username
         db.execute("INSERT INTO Users (username,password,email) VALUES ('"+str(username)+"','"+str(password)+"','"+str(email)+"')")
         db.commit()
-        print("USUARIO REGISTRADO")
         # Redirect user to home page
         
         return redirect("/")
     else:
         return render_template("register.html")
+
+@app.route("/search", methods=["GET","POST"])
+@login_required
+def search():
+    return render_template('search.html')
+
+@app.route("/searchResult", methods=["POST"])
+@login_required
+def searchResult():
+    flag = True
+    #books=[]
+    value = request.form.get("search")
+    book = db.execute("SELECT * FROM books WHERE isbn = '"+str(value)+"'").fetchall()
+    if len(book) != 0:
+        res = requests.get("https://www.googleapis.com/books/v1/volumes?q="+str(value))
+        data = res.json()
+        items = data["items"]
+        encoded = json.dumps(items)
+        
+        decode = json.loads(encoded)
+
+        autor = decode[0]["volumeInfo"]["authors"]
+        titulo = decode[0]["volumeInfo"]["title"]
+        linkImg=decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"]
+        categoria = decode[0]["volumeInfo"]["categories"]
+        try:
+            descripcion = decode[0]["volumeInfo"]["description"]
+            if len(descripcion) > 400:
+                descripcion = descripcion[0:400]+"..."
+                   
+        except Exception:
+            descripcion = "Not description"
+
+        try:
+            rate = decode[0]["volumeInfo"]["averageRating"]       
+        except Exception:
+            rate = "0"
+        rates_commits = db.execute("SELECT * FROM user_rate WHERE id_book = '"+str(value)+"'").fetchall()
+        return render_template('searchResult.html',isbn=value,titulo=titulo,linkImg=linkImg,autor=autor,categoria=categoria,descripcion=descripcion,rate=rate,rates_commits=rates_commits)
+    else:
+        isbn = db.execute("SELECT isbn FROM books WHERE title = '"+str(value)+"'").fetchall()
+        if len(isbn) != 0:
+            res = requests.get("https://www.googleapis.com/books/v1/volumes?q="+str(isbn))
+            data = res.json()
+            items = data["items"]
+            encoded = json.dumps(items)
+            
+            decode = json.loads(encoded)
+
+            autor = decode[0]["volumeInfo"]["authors"]
+            titulo = decode[0]["volumeInfo"]["title"]
+            linkImg=decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"]
+            categoria = decode[0]["volumeInfo"]["categories"]
+            try:
+                descripcion = decode[0]["volumeInfo"]["description"]
+                if len(descripcion) > 400:
+                    descripcion = descripcion[0:400]+"..."      
+            except Exception:
+                descripcion = "Not description"
+
+            try:
+                rate = decode[0]["volumeInfo"]["averageRating"]       
+            except Exception:
+                rate = "0"
+            #extraemos valoraciones y comentarios
+            rates_commits = db.execute("SELECT * FROM user_rate WHERE id_book = '"+str(isbn)+"'").fetchall()
+            return render_template('searchResult.html',isbn=isbn,titulo=titulo,linkImg=linkImg,autor=autor,categoria=categoria,descripcion=descripcion,rate=rate,rates_commits=rates_commits)
+        else:
+            flash('No se encontro el libro')
+            return redirect("/search")
+             
+@app.route("/addComment/<isbn>", methods=["POST"])
+@login_required
+def addComment(isbn):
+        rate = request.form.get("rate")
+        comment = request.form.get("comment")
+        username = db.execute("SELECT username FROM Users WHERE id_user = "+str(session["id_user"])+"").fetchall()
+        username = f"%{username}%"
+        print(username)        
+        # Query database for username
+        #db.execute("INSERT INTO user_rate (rate,comment,id_user,id_book,username) VALUES ("+str(rate)+",'"+str(comment)+"',"+str(session["id_user"])+",'"+str(isbn)+"','"+str(username)+"')")
+        #db.commit()
+        return redirect("/search")
