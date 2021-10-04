@@ -5,7 +5,7 @@ from flask import Flask, session, render_template, url_for, request, flash, redi
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
-from funciones import login_required
+from funciones import *
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
@@ -45,7 +45,7 @@ def index():
                 rate = decode[0]["volumeInfo"]["averageRating"]       
         except Exception:
                 rate = "0"
-        books.append([decode[0]["volumeInfo"]["title"],decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"],rate])
+        books.append([decode[0]["volumeInfo"]["title"],decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"],rate,isbn])
         
     #Obtencion del nombre de usuario
     idUser=session.get("id_user")
@@ -136,13 +136,14 @@ def register():
 def search():
     return render_template('search.html')
 
+
+
 @app.route("/searchResult", methods=["POST"])
 @login_required
 def searchResult():
-    flag = True
-    #books=[]
     value = request.form.get("search")
-    book = db.execute("SELECT * FROM books WHERE isbn = '"+str(value)+"'").fetchall()
+    valueNew = limpiarString(value)
+    book = db.execute("SELECT * FROM books WHERE isbn = '"+str(valueNew)+"'").fetchall()
     if len(book) != 0:
         res = requests.get("https://www.googleapis.com/books/v1/volumes?q="+str(value))
         data = res.json()
@@ -152,9 +153,11 @@ def searchResult():
         decode = json.loads(encoded)
 
         autor = decode[0]["volumeInfo"]["authors"]
+        autor = limpiarString(autor)
         titulo = decode[0]["volumeInfo"]["title"]
         linkImg=decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"]
         categoria = decode[0]["volumeInfo"]["categories"]
+        categoria = limpiarString(categoria)
         try:
             descripcion = decode[0]["volumeInfo"]["description"]
             if len(descripcion) > 400:
@@ -172,7 +175,9 @@ def searchResult():
     else:
         isbn = db.execute("SELECT isbn FROM books WHERE title = '"+str(value)+"'").fetchall()
         if len(isbn) != 0:
-            res = requests.get("https://www.googleapis.com/books/v1/volumes?q="+str(isbn))
+            isbn = (f"{isbn}")
+            isbnNew = limpiarString(isbn)
+            res = requests.get("https://www.googleapis.com/books/v1/volumes?q="+str(isbnNew))
             data = res.json()
             items = data["items"]
             encoded = json.dumps(items)
@@ -180,9 +185,11 @@ def searchResult():
             decode = json.loads(encoded)
 
             autor = decode[0]["volumeInfo"]["authors"]
+            autor = limpiarString(autor)
             titulo = decode[0]["volumeInfo"]["title"]
             linkImg=decode[0]["volumeInfo"]["imageLinks"]["smallThumbnail"]
             categoria = decode[0]["volumeInfo"]["categories"]
+            categoria = limpiarString(categoria)
             try:
                 descripcion = decode[0]["volumeInfo"]["description"]
                 if len(descripcion) > 400:
@@ -194,9 +201,9 @@ def searchResult():
                 rate = decode[0]["volumeInfo"]["averageRating"]       
             except Exception:
                 rate = "0"
-            #extraemos valoraciones y comentarios
-            rates_commits = db.execute("SELECT * FROM user_rate WHERE id_book = '"+str(isbn)+"'").fetchall()
-            return render_template('searchResult.html',isbn=isbn,titulo=titulo,linkImg=linkImg,autor=autor,categoria=categoria,descripcion=descripcion,rate=rate,rates_commits=rates_commits)
+            #extraemos valoraciones y comentarios         
+            rates_commits = db.execute("SELECT * FROM user_rate WHERE id_book = '"+str(isbnNew)+"'").fetchall()
+            return render_template('searchResult.html',isbn=isbnNew,titulo=titulo,linkImg=linkImg,autor=autor,categoria=categoria,descripcion=descripcion,rate=rate,rates_commits=rates_commits)
         else:
             flash('No se encontro el libro')
             return redirect("/search")
@@ -208,8 +215,10 @@ def addComment(isbn):
         comment = request.form.get("comment")
         username = db.execute("SELECT username FROM Users WHERE id_user = "+str(session["id_user"])+"").fetchall()
         username = f"%{username}%"
-        print(username)        
+        username = limpiarString(username)
+            
         # Query database for username
-        #db.execute("INSERT INTO user_rate (rate,comment,id_user,id_book,username) VALUES ("+str(rate)+",'"+str(comment)+"',"+str(session["id_user"])+",'"+str(isbn)+"','"+str(username)+"')")
-        #db.commit()
+        db.execute("INSERT INTO user_rate (rate,comment,id_user,id_book,username) VALUES ("+str(rate)+",'"+str(comment)+"',"+str(session["id_user"])+",'"+str(isbn)+"','"+str(username)+"')")
+        db.commit()
+        flash("Comentario agregado")
         return redirect("/search")

@@ -9,10 +9,13 @@
         <div class="card">
             <img src="{{book.1}}" class="card-img-top" alt="..." style="height: 400px;">
             <div class="card-body">
-                <h5 class="card-text" style="text-align: center;">{{book.0}}</h5>
-                <h5 class="card-text" style="text-align: center; color: gold;">{{book.2}}
-                <img src="https://res.cloudinary.com/dzlbg8ni6/image/upload/c_scale,h_25/v1633129707/star_77949_fwyw88.png" alt=""></h5>
-                <a href="#" class="btn btn-primary" style="width: 100%;">Ver Libro</a>
+                <form action="/searchResult" method="POST">
+                    <h5  class="card-text" style="text-align: center;">{{book.0}}</h5>
+                    <h5 class="card-text" style="text-align: center; color: gold;">{{book.2}}
+                    <img src="https://res.cloudinary.com/dzlbg8ni6/image/upload/c_scale,h_25/v1633129707/star_77949_fwyw88.png" alt=""></h5>
+                    <input name="search" type="text" value="{{book.3}}"  style="width: 0px; height: 0px; margin:0; padding: 0; border:blanchedalmond;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Ver Libro</button>
+                </form>
             </div>
         </div>
 

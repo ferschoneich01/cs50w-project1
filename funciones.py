@@ -28,3 +28,13 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def limpiarString(c):
+    cad2 = ""
+    #i = 0
+    for cad in c:
+        if cad == "[" or cad == "]" or cad == "(" or cad == ")" or cad == "," or cad == "%" or cad == "\'":
+            cad == ""
+        else:
+            cad2=cad2+cad
+    return cad2
+
